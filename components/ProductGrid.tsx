@@ -13,7 +13,11 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
   const categories = [
     "all",
-    ...Array.from(new Set(products.map((p) => p.category).filter(Boolean))),
+    ...Array.from(
+      new Set(
+        products.map((p) => p.category).filter((c): c is string => Boolean(c))
+      )
+    ),
   ];
 
   const filteredProducts =
