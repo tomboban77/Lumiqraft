@@ -1,65 +1,236 @@
-import Image from "next/image";
+import About from "@/components/About";
+import Contact from "@/components/Contact";
+import Footer from "@/components/Footer";
+import Hero from "@/components/Hero";
+import Navigation from "@/components/Navigation";
+import ProductGrid from "@/components/ProductGrid";
+import { client } from "@/lib/sanity.client";
+import { productsQuery, siteSettingsQuery } from "@/lib/sanityqueries";
+import { Product, SiteSettings } from "@/types";
+import { Metadata } from "next";
 
-export default function Home() {
+async function getProducts(): Promise<Product[]> {
+  try {
+    return await client.fetch(productsQuery);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
+}
+
+async function getSiteSettings(): Promise<SiteSettings> {
+  try {
+    const settings = await client.fetch(siteSettingsQuery);
+    return settings || {};
+  } catch (error) {
+    console.error("Error fetching site settings:", error);
+    return {};
+  }
+}
+
+// SEO Metadata
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const products = await getProducts();
+
+  const siteName = "Lumiqraft";
+  const siteUrl = "https://www.lumiqraft.com"; // Replace with your actual domain
+  const defaultDescription =
+    "Discover amazing children's books, coloring books, and educational materials at Lumiqraft. Quality books that inspire imagination, creativity, and learning for kids of all ages.";
+
+  return {
+    title: {
+      default: `${siteName} - Quality Children's Books & Educational Materials`,
+      template: `%s | ${siteName}`,
+    },
+    description: settings.aboutText?.substring(0, 160) || defaultDescription,
+    keywords: [
+      "children's books",
+      "kids books",
+      "coloring books",
+      "educational books",
+      "drawing books",
+      "activity books",
+      "books for kids",
+      "children's literature",
+      "picture books",
+      "learning books",
+      "creative books",
+      "Amazon books",
+    ],
+    authors: [{ name: siteName }],
+    creator: siteName,
+    publisher: siteName,
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      url: siteUrl,
+      siteName: siteName,
+      title: `${siteName} - Quality Children's Books & Educational Materials`,
+      description: settings.aboutText?.substring(0, 160) || defaultDescription,
+      images: [
+        {
+          url: `${siteUrl}/og-image.jpg`, // Add your OG image
+          width: 1200,
+          height: 630,
+          alt: `${siteName} - Children's Books`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${siteName} - Quality Children's Books & Educational Materials`,
+      description: settings.aboutText?.substring(0, 160) || defaultDescription,
+      images: [`${siteUrl}/og-image.jpg`],
+      creator: "@lumiqraft", // Replace with your Twitter handle
+    },
+    alternates: {
+      canonical: siteUrl,
+    },
+    verification: {
+      google: "your-google-verification-code", // Add your Google Search Console verification
+      // yandex: "your-yandex-verification-code",
+      // bing: "your-bing-verification-code",
+    },
+    category: "Books & Literature",
+  };
+}
+
+export default async function Home() {
+  const [products, siteSettings] = await Promise.all([
+    getProducts(),
+    getSiteSettings(),
+  ]);
+
+  // Generate JSON-LD structured data for better SEO
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://www.lumiqraft.com/#website",
+        url: "https://www.lumiqraft.com",
+        name: "Lumiqraft",
+        description:
+          "Quality children's books, coloring books, and educational materials",
+        publisher: {
+          "@id": "https://www.lumiqraft.com/#organization",
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: "https://www.lumiqraft.com/?s={search_term_string}",
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://www.lumiqraft.com/#organization",
+        name: "Lumiqraft",
+        url: "https://www.lumiqraft.com",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://www.lumiqraft.com/logo.png",
+          width: 512,
+          height: 512,
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: siteSettings.contactEmail || "contact@lumiqraft.com",
+          contactType: "Customer Service",
+        },
+        sameAs: [
+          siteSettings.socialLinks?.facebook || "",
+          siteSettings.socialLinks?.instagram || "",
+          siteSettings.socialLinks?.twitter || "",
+        ].filter(Boolean),
+      },
+      {
+        "@type": "CollectionPage",
+        "@id": "https://www.lumiqraft.com/#webpage",
+        url: "https://www.lumiqraft.com",
+        name: "Lumiqraft - Quality Children's Books & Educational Materials",
+        description:
+          "Browse our collection of amazing children's books, coloring books, and educational materials",
+        isPartOf: {
+          "@id": "https://www.lumiqraft.com/#website",
+        },
+        about: {
+          "@id": "https://www.lumiqraft.com/#organization",
+        },
+        breadcrumb: {
+          "@id": "https://www.lumiqraft.com/#breadcrumb",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://www.lumiqraft.com/#breadcrumb",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://www.lumiqraft.com",
+          },
+        ],
+      },
+      // Add ItemList for products
+      {
+        "@type": "ItemList",
+        itemListElement: products.map((product, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "Book",
+            name: product.title,
+            description: product.description,
+            image: product.imageUrl,
+            offers: {
+              "@type": "Offer",
+              price: product.price,
+              priceCurrency: "USD",
+              availability: "https://schema.org/InStock",
+              url: product.amazonLink,
+              seller: {
+                "@type": "Organization",
+                name: "Amazon",
+              },
+            },
+          },
+        })),
+      },
+    ],
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <main className="min-h-screen">
+        <Navigation />
+        <Hero settings={siteSettings} />
+        <ProductGrid products={products} />
+        <About settings={siteSettings} />
+        <Contact settings={siteSettings} />
+        <Footer settings={siteSettings} />
       </main>
-    </div>
+    </>
   );
 }
