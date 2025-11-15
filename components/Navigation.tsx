@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function Navigation() {
@@ -124,6 +125,12 @@ export default function Navigation() {
             </div>
             <span className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
               Lumiqraft
+              {/* <Image
+                src="/LumIcon.png"
+                alt="Lumiqraft Logo"
+                fill
+                className="object-contain"
+              /> */}
             </span>
           </a>
 
